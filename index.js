@@ -26,7 +26,7 @@ function completeTask(indicador) {
 }
 
 function listTasks() {
-  console.log("Esta es la ista de tareas:");
+  console.log("Esta es la lista de tareas:");
   tasks.forEach((task) => {
     console.log(`Indicador: ${task.indicador}`);
     console.log(`Descripción: ${task.descripcion}`);
@@ -78,43 +78,54 @@ function promptCompleteTaskIndicator() {
   });
 }
 
-async function main() {
-  let option = "";
-  while (option !== "0") {
-    showMenu();
-    option = await readOption();
-
+function main() {
+  showMenu();
+  readOption().then(function handleOption(option) {
     switch (option) {
       case "1":
-        const { indicador, descripcion } = await promptNewTask();
-        addTask(indicador, descripcion, "incompleta");
-        console.log("Tarea agregada correctamente.");
+        promptNewTask().then(function handleNewTask({
+          indicador,
+          descripcion,
+        }) {
+          addTask(indicador, descripcion, "incompleta");
+          console.log("Tarea agregada correctamente.");
+          main();
+        });
         break;
       case "2":
-        const indicadorEliminar = await promptTaskIndicator();
-        removeTask(indicadorEliminar);
-        console.log("Tarea eliminada correctamente.");
+        promptTaskIndicator().then(function handleTaskIndicator(
+          indicadorEliminar
+        ) {
+          removeTask(indicadorEliminar);
+          console.log("Tarea eliminada correctamente.");
+          main();
+        });
         break;
       case "3":
-        const indicadorCompletar = await promptCompleteTaskIndicator();
-        completeTask(indicadorCompletar);
-        console.log("Tarea completada correctamente.");
+        promptCompleteTaskIndicator().then(function handleCompleteTaskIndicator(
+          indicadorCompletar
+        ) {
+          completeTask(indicadorCompletar);
+          console.log("Tarea completada correctamente.");
+          main();
+        });
         break;
       case "4":
         listTasks();
+        main();
         break;
       case "0":
         console.log("Saliendo del programa...");
+        rl.close();
         break;
       default:
         console.log(
           "Opción inválida. Por favor, seleccione una opción válida."
         );
+        main();
         break;
     }
-  }
-
-  rl.close();
+  });
 }
 
 main();
