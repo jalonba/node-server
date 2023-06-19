@@ -1,131 +1,64 @@
-const readline = require("readline");
+const http = require("http");
+const host = "localhost";
+const port = 3000;
 
-const rl = readline.createInterface({
-  input: process.stdin,
-  output: process.stdout,
-});
+let tasks = [
+  {
+    id: 1,
+    descripcion: "Tarea1",
+    completada: false,
+  },
+  {
+    id: 2,
+    descripcion: "Tarea2",
+    completada: false,
+  },
+  {
+    id: 3,
+    descripcion: "Tarea3",
+    completada: false,
+  },
+];
 
-const tasks = [];
+const handleGetRequest = (res) => {
+  res.writeHead(200, { "Content-Type": "application/json" });
+  res.end(JSON.stringify(tasks));
+};
 
-function addTask(indicador, descripcion, estado) {
-  tasks.push({ indicador, descripcion, estado });
-}
-
-function removeTask(indicador) {
-  const index = tasks.findIndex((task) => task.indicador === indicador);
-  if (index !== -1) {
-    tasks.splice(index, 1);
-  }
-}
-
-function completeTask(indicador) {
-  const task = tasks.find((task) => task.indicador === indicador);
-  if (task) {
-    task.estado = "completada";
-  }
-}
-
-function listTasks() {
-  console.log("Esta es la lista de tareas:");
-  tasks.forEach((task) => {
-    console.log(`Indicador: ${task.indicador}`);
-    console.log(`Descripción: ${task.descripcion}`);
-    console.log(`Estado: ${task.estado}`);
-    console.log("----");
+const handlePostRequest = (req, res) => {
+  let requestBody = "";
+  req.on("data", (chunk) => {
+    requestBody += chunk.toString();
   });
-}
-
-function showMenu() {
-  console.log("Seleccione una opción:");
-  console.log("1. Agregar tarea");
-  console.log("2. Eliminar tarea");
-  console.log("3. Completar tarea");
-  console.log("4. Listar tareas");
-  console.log("0. Salir");
-}
-
-function readOption() {
-  return new Promise((resolve) => {
-    rl.question("Opción seleccionada: ", (answer) => {
-      resolve(answer);
-    });
+  req.on("end", () => {
+    const newTask = JSON.parse(requestBody);
+    newTask.id = tasks.length + 1;
+    tasks.push(newTask);
+    res.writeHead(201, { "Content-Type": "application/json" });
+    res.end(JSON.stringify(newTask));
   });
-}
+};
 
-function promptNewTask() {
-  return new Promise((resolve) => {
-    rl.question("Indicador de la tarea: ", (indicador) => {
-      rl.question("Descripción de la tarea: ", (descripcion) => {
-        resolve({ indicador, descripcion });
-      });
-    });
-  });
-}
+const handleRequest = (req, res) => {
+  const url = new URL(req.url, `http://${host}:${port}`);
 
-function promptTaskIndicator() {
-  return new Promise((resolve) => {
-    rl.question("Indicador de la tarea a eliminar: ", (indicador) => {
-      resolve(indicador);
-    });
-  });
-}
-
-function promptCompleteTaskIndicator() {
-  return new Promise((resolve) => {
-    rl.question("Indicador de la tarea a completar: ", (indicador) => {
-      resolve(indicador);
-    });
-  });
-}
-
-function main() {
-  showMenu();
-  readOption().then(function handleOption(option) {
-    switch (option) {
-      case "1":
-        promptNewTask().then(function handleNewTask({
-          indicador,
-          descripcion,
-        }) {
-          addTask(indicador, descripcion, "incompleta");
-          console.log("Tarea agregada correctamente.");
-          main();
-        });
-        break;
-      case "2":
-        promptTaskIndicator().then(function handleTaskIndicator(
-          indicadorEliminar
-        ) {
-          removeTask(indicadorEliminar);
-          console.log("Tarea eliminada correctamente.");
-          main();
-        });
-        break;
-      case "3":
-        promptCompleteTaskIndicator().then(function handleCompleteTaskIndicator(
-          indicadorCompletar
-        ) {
-          completeTask(indicadorCompletar);
-          console.log("Tarea completada correctamente.");
-          main();
-        });
-        break;
-      case "4":
-        listTasks();
-        main();
-        break;
-      case "0":
-        console.log("Saliendo del programa...");
-        rl.close();
-        break;
-      default:
-        console.log(
-          "Opción inválida. Por favor, seleccione una opción válida."
-        );
-        main();
-        break;
+  if (url.pathname === "/tasks") {
+    if (req.method === "GET") {
+      handleGetRequest(res);
+    } else if (req.method === "POST") {
+      handlePostRequest(req, res);
+    } else {
+      res.writeHead(405); // Método no permitido
+      res.end();
     }
-  });
-}
+  } else {
+    res.writeHead(404); // Ruta no encontrada
+    res.end();
+  }
+};
 
-main();
+const server = http.createServer(handleRequest);
+
+server.listen(port, host, () => {
+  console.log(`Server is running on http://${host}:${port}`);
+});
